@@ -114,7 +114,7 @@ class TextCNN(object):
                 l2_loss += tf.nn.l2_loss(bc)
                 char_output = tf.nn.xw_plus_b(self.char_h_drop, wc, bc) 
             
-                self.conv_output = tf.concat([word_output, char_output], 1)              
+                self.conv_output = tf.concat([word_output, char_output], 1, name="word_output_concat_char_output")              
         elif mode == 2 or mode == 4: 
             self.conv_output = self.h_drop 
         elif mode == 1: 

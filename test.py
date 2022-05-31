@@ -21,23 +21,23 @@ parser.add_argument('--data.max_len_chars', type=int, default=default_max_len_ch
 default_max_len_subwords = 20
 parser.add_argument('--data.max_len_subwords', type=int, default=default_max_len_subwords, metavar="MLSW",
   help="maxium length of word in subwords/ characters (default: {})".format(default_max_len_subwords))
-parser.add_argument('--data.data_dir', type=str, default='train_10000.txt', metavar="DATADIR",
+parser.add_argument('--data.data_dir', type=str, default='test_10000.txt', metavar="DATADIR",
   help="location of data file")
 default_delimit_mode = 1
 parser.add_argument("--data.delimit_mode", type=int, default=default_delimit_mode, metavar="DLMODE",
   help="0: delimit by special chars, 1: delimit by special chars + each char as a word (default: {})".format(default_delimit_mode))
-parser.add_argument('--data.subword_dict_dir', type=str, default="runs/10000/subwords_dict.p", metavar="SUBWORD_DICT", 
+parser.add_argument('--data.subword_dict_dir', type=str, default="runs/20000/subwords_dict.p", metavar="SUBWORD_DICT", 
 	help="directory of the subword dictionary")
-parser.add_argument('--data.word_dict_dir', type=str, default="runs/10000/words_dict.p", metavar="WORD_DICT",
+parser.add_argument('--data.word_dict_dir', type=str, default="runs/20000/words_dict.p", metavar="WORD_DICT",
 	help="directory of the word dictionary")
-parser.add_argument('--data.char_dict_dir', type=str, default="runs/10000/chars_dict.p", metavar="	CHAR_DICT",
+parser.add_argument('--data.char_dict_dir', type=str, default="runs/20000/chars_dict.p", metavar="	CHAR_DICT",
 	help="directory of the character dictionary")
 
 # model args 
 default_emb_dim = 32
 parser.add_argument('--model.emb_dim', type=int, default=default_emb_dim, metavar="EMBDIM",
   help="embedding dimension size (default: {})".format(default_emb_dim))
-default_emb_mode = 1
+default_emb_mode = 5
 parser.add_argument('--model.emb_mode', type=int, default=default_emb_mode, metavar="EMBMODE",
   help="1: charCNN, 2: wordCNN, 3: char + wordCNN, 4: char-level wordCNN, 5: char + char-level wordCNN (default: {})".format(default_emb_mode))
 
@@ -47,9 +47,9 @@ parser.add_argument('--test.batch_size', type=int, default=default_batch_size, m
   help="Size of each test batch (default: {})".format(default_batch_size))
 
 # log args 
-parser.add_argument('--log.output_dir', type=str, default="runs/10000/", metavar="OUTPUTDIR",
+parser.add_argument('--log.output_dir', type=str, default="runs/20000/", metavar="OUTPUTDIR",
   help="directory to save the test results")
-parser.add_argument('--log.checkpoint_dir', type=str, default="runs/10000/checkpoints/", metavar="CHECKPOINTDIR",
+parser.add_argument('--log.checkpoint_dir', type=str, default="runs/20000/checkpoints/", metavar="CHECKPOINTDIR",
 	help="directory of the learned model")
 
 FLAGS = vars(parser.parse_args())
@@ -101,8 +101,8 @@ def test_step(x, emb_mode):
             input_x_char: x[2],
             input_x_char_pad_idx: x[3],
             dropout_keep_prob: p}
-    preds, s = sess.run([predictions, scores], feed_dict)
-    return preds, s
+    preds, s, embed_vects = sess.run([predictions, scores, embedding_vectors], feed_dict)
+    return preds, s, embed_vects
 
 checkpoint_file = tf.train.latest_checkpoint(FLAGS["log.checkpoint_dir"])
 graph = tf.Graph() 
@@ -125,6 +125,7 @@ with graph.as_default():
 
         predictions = graph.get_operation_by_name("output/predictions").outputs[0]
         scores = graph.get_operation_by_name("output/scores").outputs[0]
+        embedding_vectors =  graph.get_operation_by_name("word_char_concat/word_output_concat_char_output").outputs[0]
          
         if FLAGS["model.emb_mode"] == 1: 
             batches = batch_iter(list(chared_id_x), FLAGS["test.batch_size"], 1, shuffle=False) 
@@ -138,6 +139,7 @@ with graph.as_default():
             batches = batch_iter(list(zip(ngramed_id_x, worded_id_x, chared_id_x)), FLAGS["test.batch_size"], 1, shuffle=False)    
         all_predictions = []
         all_scores = []
+        all_embedding_vectors = None
         
         nb_batches = int(len(labels) / FLAGS["test.batch_size"])
         if len(labels) % FLAGS["test.batch_size"] != 0: 
@@ -170,14 +172,19 @@ with graph.as_default():
                 x_char, x_char_pad_idx = pad_seq(x_char, FLAGS["data.max_len_words"], FLAGS["data.max_len_subwords"], FLAGS["model.emb_dim"])
                 x_batch.extend([x_char, x_char_pad_idx])
             
-            batch_predictions, batch_scores = test_step(x_batch, FLAGS["model.emb_mode"])            
+            batch_predictions, batch_scores, batch_embedding_vectors = test_step(x_batch, FLAGS["model.emb_mode"])            
             all_predictions = np.concatenate([all_predictions, batch_predictions]) 
-            all_scores.extend(batch_scores) 
+            all_scores.extend(batch_scores)
+            if all_embedding_vectors is None:
+                all_embedding_vectors = batch_embedding_vectors
+            else: 
+                all_embedding_vectors = np.concatenate((all_embedding_vectors, batch_embedding_vectors), axis = 0)
 
             it.set_postfix()
+
 
 if labels is not None: 
     correct_preds = float(sum(all_predictions == labels)) 
     print("Accuracy: {}".format(correct_preds/float(len(labels))))
 
-save_test_result(labels, all_predictions, all_scores, FLAGS["log.output_dir"]) 
+save_test_result(labels, all_predictions, all_scores, all_embedding_vectors, FLAGS["log.output_dir"]) 

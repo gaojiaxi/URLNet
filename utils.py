@@ -8,7 +8,7 @@ from tflearn.data_utils import to_categorical
 from tensorflow.contrib import learn 
 
 def read_data(file_dir): 
-    with open(file_dir) as file: 
+    with open(file_dir, encoding='cp1252') as file: 
         urls = []
         labels = []
         for line in file.readlines(): 
@@ -375,7 +375,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             end_idx = min((batch_num+1) * batch_size, data_size)
             yield shuffled_data[start_idx:end_idx]
 
-def save_test_result(labels, all_predictions, all_scores, output_dir): 
+def save_test_result(labels, all_predictions, all_scores, all_embedding_vectors, output_dir): 
     output_labels = []
     for i in labels: 
         if i == 1: 
@@ -389,9 +389,13 @@ def save_test_result(labels, all_predictions, all_scores, output_dir):
         else: 
             output_preds.append(-1) 
     softmax_scores = [softmax(i) for i in all_scores]
-    with open(output_dir, "w") as file: 
+    output_prob_dir = os.path.join(output_dir, "test_output.txt")
+    output_vect_dir = os.path.join(output_dir, "test_vect.npy")
+    with open(output_prob_dir, "w") as file: 
         output = "label\tpredict\tscore\n"
         file.write(output)
         for i in range(len(output_labels)): 
             output = str(int(output_labels[i])) + '\t' + str(int(output_preds[i])) + '\t' + str(softmax_scores[i][1]) + '\n' 
             file.write(output) 
+    with open(output_vect_dir, "wb") as f:
+        np.save(f, all_embedding_vectors)

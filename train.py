@@ -32,7 +32,7 @@ parser.add_argument('--data.min_word_freq', type=int, default=default_min_word_f
 default_dev_pct = 0.001
 parser.add_argument('--data.dev_pct', type=float, default=default_dev_pct, metavar="DEVPCT",
   help="percentage of training set used for dev (default: {})".format(default_dev_pct))
-parser.add_argument('--data.data_dir', type=str, default='train_10000.txt', metavar="DATADIR",
+parser.add_argument('--data.data_dir', type=str, default='test_10000.txt', metavar="DATADIR",
   help="location of data file")
 default_delimit_mode = 1 
 parser.add_argument("--data.delimit_mode", type=int, default=default_delimit_mode, metavar="DLMODE",
@@ -45,7 +45,7 @@ parser.add_argument('--model.emb_dim', type=int, default=default_emb_dim, metava
 default_filter_sizes = "3,4,5,6"
 parser.add_argument('--model.filter_sizes', type=str, default=default_filter_sizes, metavar="FILTERSIZES",
   help="filter sizes of the convolution layer (default: {})".format(default_filter_sizes))
-default_emb_mode = 1 
+default_emb_mode = 5
 parser.add_argument('--model.emb_mode', type=int, default=default_emb_mode, metavar="EMBMODE",
   help="1: charCNN, 2: wordCNN, 3: char + wordCNN, 4: char-level wordCNN, 5: char + char-level wordCNN (default: {})".format(default_emb_mode))
 
@@ -63,7 +63,7 @@ parser.add_argument('--train.lr', type=float, default=default_lr, metavar="LR",
   help="learning rate for optimizer (default: {})".format(default_lr))
 
 # log args 
-parser.add_argument('--log.output_dir', type=str, default="runs/10000/", metavar="OUTPUTDIR",
+parser.add_argument('--log.output_dir', type=str, default="runs/20000/", metavar="OUTPUTDIR",
   help="directory of the output model")
 parser.add_argument('--log.print_every', type=int, default=50, metavar="PRINTEVERY",
   help="print training result every this number of steps (default: 50)")
